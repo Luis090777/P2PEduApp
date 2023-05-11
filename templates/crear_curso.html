@@ -27,7 +27,7 @@
         
         <div class="nav-links">
          <div class="text">
-            {{ user.carne }}
+            {{ usuario.carne }}
             <img class="img" src="{% static 'images/' %}{{ selected_image }}" alt="Imagen seleccionada" style="width: 2rem; ">
          </div>
           
@@ -47,7 +47,7 @@
             <input type="text" id="carrera_curso" name="carrera_curso">
             <label> Al crear el curso se le asignara un Token, con este token podra invitar a usuarios a unirse a este curso. </label>
             <label> Debido a que creaste el curso seras asignado como Votan de manera automatica. </label>
-            <input type="hidden" name="votan_curso" value="{{user.name}}">
+            <input type="hidden" name="votan_curso" value="{{usuario.carne}}">
             
           <button type="submit" style="margin-right: 10;">
               

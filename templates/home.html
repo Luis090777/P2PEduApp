@@ -58,11 +58,10 @@
         <div class="course_container">
           
           
-
-          <form action="{% url 'curso'%}" method="post">
+          {% for clave, valor in datos.items %}
+          <form action="{% url 'curso' token_curso=valor.token_curso %}" method="get">  
             {% csrf_token %}
-            {% for clave, valor in datos.items %}
-            <button type="submit" name="token" value="{{ valor.token_curso }}">
+            <button type="submit" name="token" value="{{ valor.token_curso }}" id="curso_{{ clave }}">
               <div class="course_box">
                 <svg style="padding:center;" xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-school" width="150" height="150" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2D459B" fill="none" stroke-linecap="round" stroke-linejoin="round">
                   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -70,10 +69,10 @@
                   <path d="M6 10.6v5.4a6 3 0 0 0 12 0v-5.4" />
                 </svg>
                 <span>{{ valor.nombre_curso }}</span>
-                
               </div>
             </button>
-            {% endfor %}
+          </form>
+        {% endfor %}
           
           </form>
   

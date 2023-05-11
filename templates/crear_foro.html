@@ -11,8 +11,8 @@
 </head>
 <body>
     <header>
-      <div id="carnet">{{user.name}}</div>
-      <div id="carnet">{{user.carne}}</div>
+      <div id="carnet">{{usuario.name}}</div>
+      <div id="carnet">{{usuario.carne}}</div>
       <div id="carnet">{{nombre}}</div>
     </header>
     
@@ -24,26 +24,22 @@
           <li><a href="">Exportar Curso</a></li>
         </ul>
       </nav>
-      
-      <article>
-        <h2>foros Disponibles:</h2>
-        <div>
-          {% for clave, valor in datos.items %}
-          <section class="forum_select">
-            <div class="forum_box">
-              
-              <svg style="padding:center;" xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-school" width="150" height="150" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2D459B" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M22 9l-10 -4l-10 4l10 4l10 -4v6" />
-                <path d="M6 10.6v5.4a6 3 0 0 0 12 0v-5.4" />
-              </svg>
-              <span>{{ valor.name }}</span>
-            </div>
-          </section>  
-          {% endfor %}
-        </div>
-        <br></br>
-    
+      <main>    
+
+        <h1>Crear nuevo foro</h1>
+        <form action="{% url 'registrar_foro' token_curso=token_curso %}" method="post">
+          {% csrf_token %}     
+            <label for="titulo_foro">Descripción:</label><br>
+            <textarea id="titulo_foro" name="titulo_foro" rows="4" cols="50"></textarea><br>
+            <label for="comentario">Primer comentario:</label><br>
+            <textarea id="comentario" name="comentario" rows="4" cols="50"></textarea><br><br>
+            <button onclick = "history.back()" > Crear Foro</button>
+            <button type="submit" style="margin-right: 10;">
+            <input type="hidden" name="creador_foro" value="{{usuario.carne}}">
+            
+          </form>
+      </form>    
+    </main>   
 
     </body>
 </html>

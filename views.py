@@ -1,6 +1,7 @@
 import os
 import json
 import hashlib
+from django.http import HttpResponse
 
 from django.shortcuts import render, redirect
 #Importacion de los scripts de models (Manipulacion de los JSON)
@@ -26,24 +27,30 @@ def home(request):
 
 
 
-def curso(request): #Pagina de Curso
-	token=request.POST.get('token') #Se carga el token del curso que se le dio click con el button
-	datos = load_courses() #se obtienen los datos de todos los cursos
-	usuario=load_profile # se carga el perfil de usuario actual conectado
+def curso(request, token_curso): #Pagina de Curso
+    datos = load_courses() #se obtienen los datos de todos los cursos
+    foros = cargar_foros(token_curso)
+    usuario = load_profile # se carga el perfil de usuario actual conectado
 
-	for clave, valor in datos.items(): # se recorren todos los cursos para obtener el que cumpla con la condicion de tener el mismo token que el que seleccionamos
-		if(valor['token_curso'] == token):
-			print(clave)
-			print(valor)
-			curso=valor
-			break
-	return render(request,'curso.html',{"curso":curso, "usuario":usuario}) #se manda el curso que hemos seleccionado
+    for clave, valor in datos.items(): # se recorren todos los cursos para obtener el que cumpla con la condicion de tener el mismo token que el que seleccionamos
+        if(valor['token_curso'] == token_curso):
+            print(clave)
+            print(valor)
+            curso=valor
+            break
+    return render(request,'curso.html',{"curso":curso, "usuario":usuario,'token_curso':token_curso, 'foros':foros}) #se manda el curso que hemos seleccionado
 
-
+def foro(request, token_curso, id_foro):
+    foros = cargar_foros(token_curso)
+    foro = foros[int(id_foro)-1]
+    usuario = load_profile()
+    
+    return render(request,'foro.html',{"foro":foro, 'token_curso':token_curso, 'usuario':usuario}) #se manda el foro que hemos seleccionado
+	
 
 def crear_curso(request): #crea el curso
-	user=load_profile #Carga el perfil para darle autoria de la creacion del curso
-	return render(request, 'crear_curso.html',{'user':user}) #Llama al html para crear el curso
+	usuario=load_profile #Carga el perfil para darle autoria de la creacion del curso
+	return render(request, 'crear_curso.html',{'usuario':usuario}) #Llama al html para crear el curso
 
 
 
@@ -78,6 +85,141 @@ def registrar_curso(request):
 			json.dump(datos_curso, archivo)
 	return render(request, 'registrar_curso.html', {'token': token})
 
+
+def crear_foro(request, token_curso):
+    usuario=load_profile 
+    return render(request, 'crear_foro.html', {'token_curso': token_curso, 'usuario':usuario})
+
+
+
+def registrar_foro(request, token_curso):
+    if request.method == 'POST':
+        titulo_foro = request.POST.get('titulo_foro')
+        creador_foro = request.POST.get('creador_foro')
+        mensajes = []
+        respuestas = []
+
+        primer_mensaje = {
+            "id": 1,
+            "autor": creador_foro, # Assign the author's username to the 'autor' fiel
+	        "mensaje": request.POST.get('comentario'),
+            "respuestas": respuestas
+        }
+        mensajes.append(primer_mensaje)
+	
+        datos_foro = {
+            "id": encontrar_foro_id(token_curso),
+            "autor": creador_foro, # Assign the author's username to the 'autor' field
+            "titulo": titulo_foro,
+            "mensajes": mensajes
+        }
+
+	
+        # Escribir el archivo JSON en la lista de foros del curso
+        ruta_cursos = os.path.join(BASE_DIR, 'data', 'courses')
+        ruta_curso = os.path.join(ruta_cursos, token_curso +'.json')
+	
+        with open(ruta_curso, 'r') as archivo_curso:
+            datos_curso = json.load(archivo_curso)
+            datos_curso['foros'].append(datos_foro)
+	    
+        with open(ruta_curso, 'w') as archivo_curso:
+            json.dump(datos_curso, archivo_curso, indent=4)
+	
+    return redirect('curso', token_curso=token_curso)
+
+def agregar_mensaje(request, token_curso, id_foro):
+    if request.method == 'POST':
+        autor = request.POST.get('autor_mensaje')
+        contenido = request.POST.get('texto')
+
+        ruta_cursos = os.path.join(BASE_DIR, 'data', 'courses')
+        ruta_curso = os.path.join(ruta_cursos, token_curso + '.json')
+
+        with codecs.open(ruta_curso, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # Obtener el foro correspondiente al ID
+        foro = None
+        for f in data['foros']:
+            if f['id'] == id_foro:
+                foro = f
+                break
+
+        if foro is None:
+            # Foro no encontrado, manejar el error adecuadamente
+            return HttpResponse('Foro no encontrado')
+
+        # Obtener el último ID de todos los mensajes con todas sus respuestas correspondientes especificado por id_foro
+        last_msg_id = obtener_ultimo_id_mensajes(foro['mensajes'])
+
+        # Crear el nuevo mensaje
+        nuevo_mensaje = {
+            "id": last_msg_id + 1,
+            "autor": autor,
+            "mensaje": contenido,
+            "respuestas": []
+        }
+
+        # Agregar el nuevo mensaje al foro
+        foro['mensajes'].append(nuevo_mensaje)
+
+        # Escribir el archivo JSON actualizado
+        with codecs.open(ruta_curso, "w", encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+
+    return redirect('foro', token_curso=token_curso, id_foro=id_foro)
+
+
+def agregar_respuesta(request, token_curso, id_foro, id_mensaje):
+    if request.method == 'POST':
+        autor = request.POST.get('autor_mensaje')
+        contenido = request.POST.get('texto')
+
+        ruta_cursos = os.path.join(BASE_DIR, 'data', 'courses')
+        ruta_curso = os.path.join(ruta_cursos, token_curso + '.json')
+
+        with codecs.open(ruta_curso, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # Obtener el foro correspondiente al ID
+        foro = None
+        for f in data['foros']:
+            if f['id'] == id_foro:
+                foro = f
+                break
+
+        if foro:
+            # Obtener el último ID de todos los mensajes con todas sus respuestas correspondientes especificado por id_foro
+            last_resp_id = obtener_ultimo_id_mensajes(foro['mensajes'])
+
+            nueva_respuesta = {
+                "id": last_resp_id + 1,
+                "autor": autor,
+                "mensaje": contenido,
+                "respuestas": []
+            }
+
+            # Buscar el mensaje al que se quiere agregar la respuesta
+            mensaje = buscar_mensaje(foro['mensajes'], id_mensaje)
+
+            if mensaje:
+                mensaje['respuestas'].append(nueva_respuesta)
+            else:
+                raise ValueError(f"No se encontró ningún mensaje con el ID {id_mensaje}")
+
+            # Escribir el archivo JSON actualizado
+            with codecs.open(ruta_curso, "w", encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+        else:
+            raise ValueError(f"No se encontró ningún foro con el ID {id_foro}")
+
+    return redirect('foro', token_curso=token_curso, id_foro=id_foro)
+   
+
+
+
+
 def cargar_archivo(request):
 	if request.method == 'POST' and request.FILES['archivo']:
 		archivo = request.FILES['archivo']
@@ -89,3 +231,5 @@ def cargar_archivo(request):
 				f.write(chunk)
 		return render(request, 'cargar_archivo.html')
 	return render(request, 'cargar_archivo.html')
+
+

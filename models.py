@@ -1,3 +1,4 @@
+import codecs
 import os
 import json
 import shutil
@@ -35,7 +36,6 @@ def load_profile():
     except:
         return
     datos= json.loads(f.read())
-    print("Log: Usuario ha sido cargado")
     current_user=datos
     return datos                
 
@@ -62,3 +62,60 @@ def get_random_image():
     img_path = os.path.join(img_dir, img_name)
     return img_path, img_name
 
+
+def buscar_mensaje(mensajes, id_mensaje):
+    for mensaje in mensajes:
+        if mensaje['id'] == id_mensaje:
+            return mensaje
+        if mensaje['respuestas']:
+            respuesta_encontrada = buscar_mensaje(mensaje['respuestas'], id_mensaje)
+            if respuesta_encontrada:
+                return respuesta_encontrada
+    return None
+
+
+def encontrar_foro_id(token_curso):
+    # Load course data from JSON file
+    ruta_cursos = os.path.join(BASE_DIR, 'data', 'courses')
+    with open(ruta_cursos +'/{}.json'.format(token_curso), 'r') as f:
+        data = json.load(f)
+
+    if 'foros' in data and data['foros']:
+        # If there are forums and they are not empty, find the last forum ID and add 1
+        foro_ids = [foro['id'] for foro in data['foros']]
+        new_id = max(foro_ids) + 1
+    else:
+        # If there are no forums, start ID count at 1
+        new_id = 1
+
+    return new_id
+
+def cargar_foros(token_curso):
+    ruta_cursos = os.path.join(BASE_DIR, 'data', 'courses')
+    with open(ruta_cursos +'/{}.json'.format(token_curso), 'r') as f:
+        data = json.load(f)
+         
+    foros = []
+    for foro in data['foros']:
+        foro_json = {
+            'id': foro['id'],
+            'autor': foro['autor'],
+            'titulo': foro['titulo'],
+            'mensajes': foro['mensajes']
+        }
+        foros.append(foro_json)
+    return foros
+
+def obtener_ultimo_id_mensajes(mensajes):
+    last_msg_id = 0
+
+    for mensaje in mensajes:
+        if mensaje['id'] > last_msg_id:
+            last_msg_id = mensaje['id']
+
+        if mensaje['respuestas']:
+            last_resp_id = obtener_ultimo_id_mensajes(mensaje['respuestas'])
+            if last_resp_id > last_msg_id:
+                last_msg_id = last_resp_id
+
+    return last_msg_id
